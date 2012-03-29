@@ -26,7 +26,7 @@ _regex_extractShows = re.compile("<li class=\"(first-child|last-child)\"><a href
 _regex_extractShowsPages = re.compile("<strong class=\"title\">Seite <em>(.*?)</em>von<em>(.*?)</em></strong>");
 _regex_extractEpisode = re.compile("<dl class=\" item item-(.*?)\">(.*?)</dl>", re.DOTALL);
 _regex_extractEpisodeLink = re.compile("<a href=\"(.*)\">");
-_regex_extractEpisodeTitle = re.compile("<dd class=\"description\"> (.*)</dd>");
+_regex_extractEpisodeTitle = re.compile("<dd class=\"description\"> (.*?)(Teil 1| - 1|1)</dd>");
 _regex_extractEpisodeImg = re.compile("src=\"(.*?)\"");
 _regex_extractVideoIds = re.compile("videoIds.push\(\"(.*)\"\);");
 
