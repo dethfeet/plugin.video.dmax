@@ -27,6 +27,7 @@ _regex_extractShowsPages = re.compile("<strong class=\"title\">Seite <em>(.*?)</
 _regex_extractEpisode = re.compile("<dl class=\" item item-(.*?)\">(.*?)</dl>", re.DOTALL);
 _regex_extractEpisodeLink = re.compile("<a href=\"(.*)\">");
 _regex_extractEpisodeTitle = re.compile("<dd class=\"description\"> (.*?)(Teil 1| - 1|1)</dd>");
+_regex_extractEpisodeTitleClassic = re.compile("<a href=\".*?\">(.*?)<span class=\"video-play\"></span>.*?<dd class=\"description\"> (.*?)(Teil 1| - 1|1)</dd>?",re.DOTALL);
 _regex_extractEpisodeImg = re.compile("src=\"(.*?)\"");
 _regex_extractVideoIds = re.compile("videoIds.push\(\"(.*)\"\);");
 
@@ -53,7 +54,13 @@ def showPage(link):
     
         for episode in episodes:
             episode_html = episode.group(2)
-            episod_title = _regex_extractEpisodeTitle.search(episode_html).group(1)
+            if link == "/video/shows/dmax-classics/moreepisodes/":
+                episod_title = _regex_extractEpisodeTitleClassic.search(episode_html).group(1)
+                episod_title = episod_title + " - "
+                episod_title = episod_title +  _regex_extractEpisodeTitleClassic.search(episode_html).group(2)
+                episod_title = episod_title.strip()
+            else:
+                episod_title = _regex_extractEpisodeTitle.search(episode_html).group(1)
             episode_link = _regex_extractEpisodeLink.search(episode_html).group(1)
             episode_img = _regex_extractEpisodeImg.search(episode_html).group(1)
             addDirectoryItem(episod_title, {"action" : "episode", "link": episode_link}, episode_img)
