@@ -122,8 +122,6 @@ def play(const, playerID, videoPlayer, publisherID):
     for item in sorted(rtmpdata['renditions'], key=lambda item:item['frameHeight'], reverse=False):
         streamHeight = item['frameHeight']
         
-        #streamName = streamName + str(streamHeight) + " "
-        
         if streamHeight <= height:
             streamUrl = item['defaultURL']
     
@@ -144,7 +142,6 @@ def playPlaylist(playlistLink, playlistContent):
         playlist.add(url=link[1], listitem=listItem);
     
     player.play(playlist, playerItem);
-
 
 def get_params():
     param = []
