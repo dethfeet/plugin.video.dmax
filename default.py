@@ -3,7 +3,6 @@ import xbmcgui
 import sys
 import urllib, urllib2, urlparse
 import re
-import pprint
 
 import httplib
 from pyamf import AMF0, AMF3
