@@ -8,6 +8,7 @@
     <provides>video</provides>
   </extension>
   <extension point="xbmc.addon.metadata">
+  	<language>de</language>
     <summary lang="en">DMAX (german television)</summary>
 	<summary lang="de">DMAX Videotheke</summary>
     <description lang="en">DMAX (german television)</description>
