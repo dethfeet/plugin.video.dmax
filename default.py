@@ -3,6 +3,7 @@ import xbmcgui
 import sys
 import urllib, urllib2, urlparse
 import re
+import json
 
 import httplib
 from pyamf import AMF0, AMF3
@@ -12,7 +13,8 @@ from pyamf.remoting.client import RemotingService
 
 thisPlugin = int(sys.argv[1])
 baseLink = "http://www.dmax.de"
-urlShows = baseLink + "/video/shows/"
+urlShows = baseLink + "/programme/"
+urlShowsSub = baseLink + "/wp-content/plugins/dni_plugin_core/ajax.php?action=dni_listing_items_filter&letter=%s&id=0e0&post_id=17268"
 
 rootLink = "http://www.dmax.de"
 height = 1080;#268|356|360|400|572|576
@@ -21,52 +23,50 @@ playerID = 586587148001;
 publisherID = 1659832546;
 playerKey = "AAAAAGLvCOI~,a0C3h1Jh3aQKs2UcRZrrxyrjE0VH93xl"
 
-_regex_extractShows = re.compile("<li class=\"(first-child|last-child)\"><a href=\"(.*)\">(.*)</a></li>");    
-_regex_extractShowsPages = re.compile("<strong class=\"title\">Seite <em>(.*?)</em>von<em>(.*?)</em></strong>");
-_regex_extractEpisode = re.compile("<dl class=\" item item-(.*?)\">(.*?)</dl>", re.DOTALL);
-_regex_extractEpisodeLink = re.compile("<a href=\"(.*)\">");
-_regex_extractEpisodeTitle = re.compile("<dd class=\"description\"> (.*?)(Teil 1| - 1|1)</dd>");
-_regex_extractEpisodeTitleClassic = re.compile("<a href=\".*?\">(.*?)<span class=\"video-play\"></span>.*?<dd class=\"description\"> (.*?)(Teil 1| - 1|1)</dd>?",re.DOTALL);
-_regex_extractEpisodeImg = re.compile("src=\"(.*?)\"");
-_regex_extractVideoIds = re.compile("videoIds.push\(\"(.*)\"\);");
+_regex_extractShowsLetter = re.compile("<a href=\"#id=0e0&letter=([A-Z#])\" "); 
+_regex_extractShows = re.compile("href=\"(.*?)\".*?src=\"(.*?)\" alt=\"(.*?)\"",re.DOTALL);
+_regex_extractEpisode = re.compile("<a class=\"dni-episode-browser-item pagetype-video\" href=\"(.*?)\">.*?src=\"(.*?)\" alt=\"(.*?)\".*?<p>(.*?)</p>.*?</a>", re.DOTALL);
+_regex_extractVideoIds = re.compile("<li data-number=\"[0-9]*\" data-guid=\"([0-9]*)\"");
 
 def mainPage():
     global thisPlugin
     page = load_page(urlShows)
-    shows = list(_regex_extractShows.finditer(page))
-    for show in shows:
-        show_title = show.group(3);
-        show_link = show.group(2) + "moreepisodes/"
-        addDirectoryItem(show_title, {"action" : "show", "link": show_link})  
+    for letterItem in _regex_extractShowsLetter.finditer(page):
+        letter = letterItem.group(1)
+        link  = (urlShowsSub) % (letter)
+        addDirectoryItem(letter, {"action" : "letter", "link": link}) 
+    xbmcplugin.endOfDirectory(thisPlugin)
+
+def showLetter(link):
+    page = load_page(link)
+    jsonShows = json.loads(page)
+    pageCount = jsonShows['total_pages']
+    for i in range(1, pageCount+1):
+        urlShowsPage = link+"&page=%i" % i
+        page = load_page(urlShowsPage)
+        jsonShowsPage = json.loads(page)
+        for show in _regex_extractShows.finditer(jsonShowsPage['html']):
+            show_title = show.group(3);
+            show_link = show.group(1) + "episoden/"
+            show_img = show.group(2)
+            addDirectoryItem(show_title, {"action" : "show", "link": show_link}, show_img) 
     xbmcplugin.endOfDirectory(thisPlugin)
 
 def showPage(link):
     global thisPlugin
-    page = load_page(baseLink + link)
-    pageCount = int(_regex_extractShowsPages.search(page).group(2))
+    page = load_page(link)
     
-    for i in range(1, pageCount + 1, 1):
-        if i > 1:
-            page = load_page(baseLink + link + "?page=" + str(i))
-        
-        episodes = list(_regex_extractEpisode.finditer(page))
+    episodes = list(_regex_extractEpisode.finditer(page))
     
-        for episode in episodes:
-            episode_html = episode.group(2)
-            if link == "/video/shows/dmax-classics/moreepisodes/":
-                episod_title = _regex_extractEpisodeTitleClassic.search(episode_html).group(1)
-                episod_title = episod_title + " - "
-                episod_title = episod_title +  _regex_extractEpisodeTitleClassic.search(episode_html).group(2)
-                episod_title = episod_title.strip()
-            else:
-                episod_title = _regex_extractEpisodeTitle.search(episode_html).group(1)
-            episode_link = _regex_extractEpisodeLink.search(episode_html).group(1)
-            episode_img = _regex_extractEpisodeImg.search(episode_html).group(1)
-            addDirectoryItem(episod_title, {"action" : "episode", "link": episode_link}, episode_img)
+    for episode in episodes:
+        episod_title = episode.group(3)
+        episode_link =episode.group(1)
+        episode_img = episode.group(2)
+        addDirectoryItem(episod_title, {"action" : "episode", "link": episode_link}, episode_img)
     xbmcplugin.endOfDirectory(thisPlugin)
 
 def showEpisode(link):
-    page = load_page(baseLink + link)
+    page = load_page(link)
     
     videoIds = list(_regex_extractVideoIds.finditer(page));
     playlistContent = []
@@ -170,5 +170,7 @@ else:
         showPage(urllib.unquote(params['link']))
     elif params['action'] == "episode":
         showEpisode(urllib.unquote(params['link']))
+    elif params['action'] == "letter":
+        showLetter(urllib.unquote(params['link']))
     else:
         mainPage()
