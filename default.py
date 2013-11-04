@@ -25,7 +25,7 @@ playerKey = "AAAAAGLvCOI~,a0C3h1Jh3aQKs2UcRZrrxyrjE0VH93xl"
 
 _regex_extractShowsLetter = re.compile("<a href=\"#id=0e0&letter=([A-Z#])\" "); 
 _regex_extractShows = re.compile("href=\"(.*?)\".*?src=\"(.*?)\" alt=\"(.*?)\"",re.DOTALL);
-_regex_extractEpisode = re.compile("<a class=\"dni-episode-browser-item pagetype-video\" href=\"(.*?)\">.*?src=\"(.*?)\" alt=\"(.*?)\".*?<p>(.*?)</p>.*?</a>", re.DOTALL);
+_regex_extractEpisode = re.compile("<a class=\"dni-episode-browser-item pagetype-(video)\" href=\"(.*?)\">.*?src=\"(.*?)\" alt=\"(.*?)\".*?<p>(.*?)</p>.*?</a>", re.DOTALL);
 _regex_extractVideoIds = re.compile("<li data-number=\"[0-9]*\" data-guid=\"([0-9]*)\"");
 
 def mainPage():
@@ -56,13 +56,28 @@ def showPage(link):
     global thisPlugin
     page = load_page(link)
     
+    _regex_extractSeasonsInfo = re.compile("<section class=\"cfct-module dni-episode-browser-items-container\" id=\".*?\" data-module-id=\"(.*?)\" data-post-id=\"(.*?)\">(.*?)</select>",re.DOTALL)
+    _regex_extractSeasons = re.compile("<option value=\"(.*?)\">(.*?)</option>")
+    season_link_base = "http://www.dmax.de/wp-content/plugins/dni_plugin_core/ajax.php?action=dni_episode_browser_get_season&post=%s&module=%s&season=%s";
+    seasonsInfo = _regex_extractSeasonsInfo.search(page)
+    data_module_id = seasonsInfo.group(1)
+    data_post_id = seasonsInfo.group(2)
+    seasonsSelect = seasonsInfo.group(3)
+    for  season in _regex_extractSeasons.finditer(seasonsSelect):
+        season_link = season_link_base % (data_post_id,data_module_id,season.group(1))
+        addDirectoryItem(season.group(2), {"action" : "season", "link": season_link})
+    xbmcplugin.endOfDirectory(thisPlugin)
+
+def showPageSeason(link):
+    page = load_page(link)
+    
     episodes = list(_regex_extractEpisode.finditer(page))
     
     for episode in episodes:
-        episod_title = episode.group(3)
-        episode_link =episode.group(1)
-        episode_img = episode.group(2)
-        addDirectoryItem(episod_title, {"action" : "episode", "link": episode_link}, episode_img)
+        episod_title = episode.group(4)
+        episode_link =episode.group(2)
+        episode_img = episode.group(3)
+        addDirectoryItem(episod_title, {"action" : "episode", "link": episode_link}, episode_img, isFolder=False)
     xbmcplugin.endOfDirectory(thisPlugin)
 
 def showEpisode(link):
@@ -86,10 +101,12 @@ def load_page(url):
     response.close()
     return link
 
-def addDirectoryItem(name, parameters={}, pic=""):
+def addDirectoryItem(name, parameters={}, pic="", isFolder=True):
     li = xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=pic)
+    #if not isFolder:
+    #    li.setProperty('IsPlayable', 'true')
     url = sys.argv[0] + '?' + urllib.urlencode(parameters)
-    return xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=li, isFolder=True)
+    return xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=li, isFolder=isFolder)
 
 def build_amf_request(const, playerID, videoPlayer, publisherID):
     env = remoting.Envelope(amfVersion=3)
@@ -141,7 +158,7 @@ def playPlaylist(playlistLink, playlistContent):
         listItem.setProperty("PlayPath", link[1]);
         playlist.add(url=link[1], listitem=listItem);
     
-    player.play(playlist, playerItem);
+    player.play(playlist, playerItem, False)
 
 def get_params():
     param = []
@@ -168,6 +185,8 @@ else:
     print params['action']
     if params['action'] == "show":
         showPage(urllib.unquote(params['link']))
+    elif params['action'] == "season":
+        showPageSeason(urllib.unquote(params['link']))
     elif params['action'] == "episode":
         showEpisode(urllib.unquote(params['link']))
     elif params['action'] == "letter":
