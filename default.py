@@ -26,7 +26,9 @@ playerKey = "AAAAAGLvCOI~,a0C3h1Jh3aQKs2UcRZrrxyrjE0VH93xl"
 _regex_extractShowsLetter = re.compile("<a href=\"#id=0e0&letter=([A-Z#])\" "); 
 _regex_extractShows = re.compile("href=\"(.*?)\".*?src=\"(.*?)\" alt=\"(.*?)\"",re.DOTALL);
 _regex_extractEpisode = re.compile("<a class=\"dni-episode-browser-item pagetype-(video)\" href=\"(.*?)\">.*?src=\"(.*?)\" alt=\"(.*?)\".*?<p>(.*?)</p>.*?</a>", re.DOTALL);
+
 _regex_extractVideoIds = re.compile("<li data-number=\"[0-9]*\" data-guid=\"([0-9]*)\"");
+_regex_extractVideoIdsSingleVideo = re.compile("<param name=\"@videoPlayer\" value=\"(.*?)\" />");
 
 def mainPage():
     global thisPlugin
@@ -84,13 +86,18 @@ def showEpisode(link):
     page = load_page(link)
     
     videoIds = list(_regex_extractVideoIds.finditer(page));
+    
+    if len(videoIds) == 0:
+         videoIds = list(_regex_extractVideoIdsSingleVideo.finditer(page));
+
+    
     playlistContent = []
     x = 0
     for videoId in videoIds:
         video = play(const, playerID, videoId.group(1), publisherID);
         playlistContent.append(video)
         x = x + 1
-    
+        
     playPlaylist(link, playlistContent)
     
 def load_page(url):
@@ -145,7 +152,18 @@ def play(const, playerID, videoPlayer, publisherID):
     streamName = streamName + rtmpdata['displayName']
     return [streamName, streamUrl];
 
-def playPlaylist(playlistLink, playlistContent):
+def playPlaylistOff(playlistLink, playlistContent):    
+    global thisPlugin
+    playlist = "stack://";
+    for i in range(len(playlistContent)):
+        playlist += playlistContent[i][1];
+        if(i!=len(playlistContent)-1):
+            playlist += " , ";
+
+    listitem = xbmcgui.ListItem(path=playlist)
+    return xbmcplugin.setResolvedUrl(thisPlugin, True, listitem)
+
+def playPlaylist(playlistLink, playlistContent):    
     player = xbmc.Player();
     
     playerItem = xbmcgui.ListItem(playlistLink);
@@ -156,9 +174,13 @@ def playPlaylist(playlistLink, playlistContent):
     for link in playlistContent:
         listItem = xbmcgui.ListItem(link[0]);
         listItem.setProperty("PlayPath", link[1]);
+        listItem.addStreamInfo('video',{})
         playlist.add(url=link[1], listitem=listItem);
     
-    player.play(playlist, playerItem, False)
+    player.play(playlist, playerItem)
+    xbmc.sleep(300) #Wait for Player to open
+    if player.pause():
+        player.play() #Start playing
 
 def get_params():
     param = []
