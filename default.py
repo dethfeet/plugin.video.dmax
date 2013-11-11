@@ -25,7 +25,7 @@ playerKey = "AAAAAGLvCOI~,a0C3h1Jh3aQKs2UcRZrrxyrjE0VH93xl"
 
 _regex_extractShowsLetter = re.compile("<a href=\"#id=0e0&letter=([A-Z#])\" "); 
 _regex_extractShows = re.compile("href=\"(.*?)\".*?src=\"(.*?)\" alt=\"(.*?)\"",re.DOTALL);
-_regex_extractEpisode = re.compile("<a class=\"dni-episode-browser-item pagetype-(video)\" href=\"(.*?)\">.*?src=\"(.*?)\" alt=\"(.*?)\".*?<p>(.*?)</p>.*?</a>", re.DOTALL);
+_regex_extractEpisode = re.compile("<a class=\"dni-episode-browser-item pagetype-(video)\" href=\"(.*?)\">.*?<p>(.*?)</p>.*?</a>", re.DOTALL);
 
 _regex_extractVideoIds = re.compile("<li data-number=\"[0-9]*\" data-guid=\"([0-9]*)\"");
 _regex_extractVideoIdsSingleVideo = re.compile("<param name=\"@videoPlayer\" value=\"(.*?)\" />");
@@ -75,10 +75,19 @@ def showPageSeason(link):
     
     episodes = list(_regex_extractEpisode.finditer(page))
     
+    _regex_episodeTitles = re.compile("<h3.*?>(.*?)</h3>")
+    _regex_episodeImg = re.compile("src=\"(.*?)\" alt=\"(.*?)\"")
+    
     for episode in episodes:
-        episod_title = episode.group(4)
+        episod_title = ""
+        for title in _regex_episodeTitles.finditer(episode.group(0)):
+            episod_title += title.group(1) + " "
         episode_link =episode.group(2)
-        episode_img = episode.group(3)
+        
+        episode_img_item = _regex_episodeImg.search(episode.group(0))
+        episode_img = ""
+        if episode_img_item is not None:
+            episode_img = episode_img_item.group(1)
         addDirectoryItem(episod_title, {"action" : "episode", "link": episode_link}, episode_img, isFolder=False)
     xbmcplugin.endOfDirectory(thisPlugin)
 
