@@ -82,7 +82,9 @@ def showPageSeason(link):
         episod_title = ""
         for title in _regex_episodeTitles.finditer(episode.group(0)):
             episod_title += title.group(1) + " "
-        episode_link =episode.group(2)
+        episod_title = episod_title.strip()
+            
+        episode_link = episode.group(2)
         
         episode_img_item = _regex_episodeImg.search(episode.group(0))
         episode_img = ""
@@ -107,7 +109,7 @@ def showEpisode(link):
         playlistContent.append(video)
         x = x + 1
         
-    playPlaylist(link, playlistContent)
+    return playPlaylist(link, playlistContent)
     
 def load_page(url):
     print "Load: " + url
@@ -119,8 +121,8 @@ def load_page(url):
 
 def addDirectoryItem(name, parameters={}, pic="", isFolder=True):
     li = xbmcgui.ListItem(name, iconImage="DefaultFolder.png", thumbnailImage=pic)
-    #if not isFolder:
-    #    li.setProperty('IsPlayable', 'true')
+    if not isFolder:
+        li.setProperty('IsPlayable', 'true')
     url = sys.argv[0] + '?' + urllib.urlencode(parameters)
     return xbmcplugin.addDirectoryItem(handle=int(sys.argv[1]), url=url, listitem=li, isFolder=isFolder)
 
@@ -161,7 +163,7 @@ def play(const, playerID, videoPlayer, publisherID):
     streamName = streamName + rtmpdata['displayName']
     return [streamName, streamUrl];
 
-def playPlaylistOff(playlistLink, playlistContent):    
+def playPlaylist(playlistLink, playlistContent):    
     global thisPlugin
     playlist = "stack://";
     for i in range(len(playlistContent)):
@@ -172,7 +174,7 @@ def playPlaylistOff(playlistLink, playlistContent):
     listitem = xbmcgui.ListItem(path=playlist)
     return xbmcplugin.setResolvedUrl(thisPlugin, True, listitem)
 
-def playPlaylist(playlistLink, playlistContent):    
+def playPlaylistOff(playlistLink, playlistContent):    
     player = xbmc.Player();
     
     playerItem = xbmcgui.ListItem(playlistLink);
@@ -186,10 +188,13 @@ def playPlaylist(playlistLink, playlistContent):
         listItem.addStreamInfo('video',{})
         playlist.add(url=link[1], listitem=listItem);
     
+    player.pause()
+    xbmc.sleep(100)
     player.play(playlist, playerItem)
-    xbmc.sleep(300) #Wait for Player to open
-    if player.pause():
-        player.play() #Start playing
+    #xbmc.sleep(100) #Wait for Player to open
+    
+    #xbmc.sleep(100)
+    #player.play() #Start playing
 
 def get_params():
     param = []
